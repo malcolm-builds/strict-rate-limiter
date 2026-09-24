@@ -76,12 +76,38 @@ There is no global setting for this. Each `TokenBucket` you construct
 is strict unless you say otherwise, so lenience is always a visible,
 local decision in the code that reviewers can see.
 
+## Sliding window log
+
+`TokenBucket` approximates a rate with a continuously refilling pool.
+`SlidingWindowLog` is the exact alternative: it keeps the timestamp
+and cost of every accepted request and forgets only the ones older
+than `window_seconds`. That avoids the burst a fixed-window counter
+lets through right at the window boundary, at the cost of memory
+proportional to the request rate. Same constructor shape, same
+strict-by-default behavior:
+
+```python
+from strictlimit import SlidingWindowLog
+
+# at most 100 units of cost in any trailing 60-second window
+limiter = SlidingWindowLog(limit=100, window_seconds=60)
+
+if limiter.allow(cost=1):
+    handle_request()
+else:
+    reject_request()
+```
+
+It raises the same `ClockWentBackwards` and `ImpossibleRequest`
+errors as `TokenBucket`, and accepts the same `lenient=True` escape
+hatch.
+
 ## Thread safety
 
-Each `TokenBucket` guards its own state with a lock, so a single
-instance can be shared across threads. It does not coordinate across
-processes or machines - for that you need a shared store, which is
-out of scope for this library.
+Each `TokenBucket` or `SlidingWindowLog` guards its own state with a
+lock, so a single instance can be shared across threads. Neither
+coordinates across processes or machines - for that you need a
+shared store, which is out of scope for this library.
 
 ## Installing
 
