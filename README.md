@@ -102,6 +102,34 @@ It raises the same `ClockWentBackwards` and `ImpossibleRequest`
 errors as `TokenBucket`, and accepts the same `lenient=True` escape
 hatch.
 
+## Using it from asyncio code
+
+`TokenBucket.allow()` and `SlidingWindowLog.allow()` are plain,
+non-blocking calls guarded by a `threading.Lock`, so you can call them
+directly from a coroutine without wrapping them in an executor. What
+you can't do with the raw limiter is wait for capacity to free up
+without writing your own poll loop. `AsyncLimiter` wraps either
+limiter and adds that:
+
+```python
+from strictlimit import AsyncLimiter, TokenBucket
+
+bucket = TokenBucket(capacity=10, refill_rate=2)
+limiter = AsyncLimiter(bucket)
+
+if await limiter.allow(cost=1):
+    handle_request()
+
+# or block the current coroutine until capacity is available,
+# instead of checking and giving up
+await limiter.wait(cost=1, timeout=5)
+handle_request()
+```
+
+`wait()` raises `TimeoutError` if the timeout elapses first, and
+propagates `ImpossibleRequest` immediately rather than polling forever
+for capacity that can never exist.
+
 ## Thread safety
 
 Each `TokenBucket` or `SlidingWindowLog` guards its own state with a

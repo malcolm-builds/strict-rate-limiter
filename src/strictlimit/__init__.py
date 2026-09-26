@@ -1,3 +1,4 @@
+from .asyncio_support import AsyncLimiter
 from .limiter import (
     ClockWentBackwards,
     ImpossibleRequest,
@@ -9,6 +10,7 @@ from .sliding_window import SlidingWindowLog
 __all__ = [
     "TokenBucket",
     "SlidingWindowLog",
+    "AsyncLimiter",
     "RateLimitError",
     "ClockWentBackwards",
     "ImpossibleRequest",
